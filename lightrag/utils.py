@@ -3241,6 +3241,7 @@ def convert_to_user_format(
             "chunk_id": chunk.get("chunk_id", ""),
         }
         # Merge extra fields if specified
+        # Note: None and empty lists are both falsy, so this check handles both cases
         if extra_chunk_fields:
             for field in extra_chunk_fields:
                 chunk_data[field] = chunk.get(field, None)
