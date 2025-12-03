@@ -3137,8 +3137,23 @@ def convert_to_user_format(
     query_mode: str,
     entity_id_to_original: dict = None,
     relation_id_to_original: dict = None,
+    extra_chunk_fields: list[str] = None,
 ) -> dict[str, Any]:
-    """Convert internal data format to user-friendly format using original database data"""
+    """Convert internal data format to user-friendly format using original database data
+    
+    Args:
+        entities_context: List of entity context dictionaries
+        relations_context: List of relation context dictionaries
+        chunks: List of chunk dictionaries
+        references: List of reference dictionaries
+        query_mode: Query mode string
+        entity_id_to_original: Optional mapping of entity IDs to original data
+        relation_id_to_original: Optional mapping of relation IDs to original data
+        extra_chunk_fields: Optional list of additional field names to extract from chunks
+    
+    Returns:
+        Dictionary with formatted data including entities, relationships, chunks, and references
+    """
 
     # Convert entities format using original data when available
     formatted_entities = []
@@ -3225,6 +3240,10 @@ def convert_to_user_format(
             "file_path": chunk.get("file_path", "unknown_source"),
             "chunk_id": chunk.get("chunk_id", ""),
         }
+        # Merge extra fields if specified
+        if extra_chunk_fields:
+            for field in extra_chunk_fields:
+                chunk_data[field] = chunk.get(field, None)
         formatted_chunks.append(chunk_data)
 
     logger.debug(
