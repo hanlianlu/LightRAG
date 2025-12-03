@@ -9,6 +9,10 @@ import pytest
 from lightrag.utils import convert_to_user_format
 
 
+# Standard chunk fields that are always included in output
+STANDARD_CHUNK_FIELDS = ["reference_id", "content", "file_path", "chunk_id"]
+
+
 class TestConvertToUserFormatBasic:
     """Test basic functionality of convert_to_user_format without extra fields."""
 
@@ -42,10 +46,7 @@ class TestConvertToUserFormatBasic:
         
         # Verify basic fields are present
         for i, chunk in enumerate(result["data"]["chunks"]):
-            assert "reference_id" in chunk
-            assert "content" in chunk
-            assert "file_path" in chunk
-            assert "chunk_id" in chunk
+            assert list(chunk.keys()) == STANDARD_CHUNK_FIELDS
             assert chunk["reference_id"] == chunks[i]["reference_id"]
             assert chunk["content"] == chunks[i]["content"]
 
@@ -307,6 +308,9 @@ class TestConvertToUserFormatExtraFields:
 
         chunk = result["data"]["chunks"][0]
         
+        # All standard fields should still be present
+        for field in STANDARD_CHUNK_FIELDS:
+            assert field in chunk
         # Standard fields should still be set correctly
         # (extra_chunk_fields processing happens AFTER standard fields)
         assert chunk["content"] == "Test content"

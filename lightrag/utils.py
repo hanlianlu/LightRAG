@@ -3135,9 +3135,9 @@ def convert_to_user_format(
     chunks: list[dict],
     references: list[dict],
     query_mode: str,
-    entity_id_to_original: dict = None,
-    relation_id_to_original: dict = None,
-    extra_chunk_fields: list[str] = None,
+    entity_id_to_original: dict | None = None,
+    relation_id_to_original: dict | None = None,
+    extra_chunk_fields: list[str] | None = None,
 ) -> dict[str, Any]:
     """Convert internal data format to user-friendly format using original database data
     
