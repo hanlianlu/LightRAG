@@ -1105,9 +1105,9 @@ MILVUS_DB_NAME=lightrag
 # Index configuration (all optional, with sensible defaults)
 MILVUS_INDEX_TYPE=HNSW         # Default: AUTOINDEX
 MILVUS_METRIC_TYPE=COSINE      # Default: COSINE (also supports L2, IP)
-MILVUS_HNSW_M=30               # Default: 30, range: [2-2048]
-MILVUS_HNSW_EF_CONSTRUCTION=200 # Default: 200
-MILVUS_HNSW_EF=100             # Default: 100
+MILVUS_HNSW_M=16               # Default: 16, range: [2-2048]
+MILVUS_HNSW_EF_CONSTRUCTION=360 # Default: 360
+MILVUS_HNSW_EF=200             # Default: 200
 ```
 
 **Advanced HNSW_SQ Configuration (Milvus 2.6.8+):**
@@ -1127,6 +1127,8 @@ MILVUS_HNSW_SQ_REFINE_K=10     # Refinement expansion factor
 - `SQ6`: ~5.3x compression, balanced
 - `SQ8`: 4x compression, good precision (recommended)
 - `BF16/FP16`: 2x compression, high precision
+
+LightRAG validates and supports all Milvus `HNSW_SQ` sq_type options exposed by current Milvus docs: `SQ4U`, `SQ6`, `SQ8`, `BF16`, `FP16`.
 
 **Example: Production Configuration with HNSW_SQ**
 ```python
@@ -1156,6 +1158,24 @@ async def initialize_rag():
     # Initialize storages (includes version validation for HNSW_SQ)
     await rag.initialize_storages()
     return rag
+```
+
+**End-to-end usage from LightRAG**
+```python
+import asyncio
+from lightrag import QueryParam
+
+async def run():
+    rag = await initialize_rag()
+    await rag.ainsert("LightRAG can use Milvus HNSW_SQ with SQ8/BF16/FP16.")
+    result = await rag.aquery(
+        "What Milvus quantization types are supported?",
+        param=QueryParam(mode="mix"),
+    )
+    print(result)
+    await rag.finalize_storages()
+
+asyncio.run(run())
 ```
 
 **Version Requirements:**

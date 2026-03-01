@@ -177,6 +177,9 @@ See `examples/milvus_kwargs_configuration_demo.py` for a complete working exampl
 
 ## FAQ
 
+### Q: Are official Milvus HNSW_SQ quantization types supported?
+**A:** Yes. LightRAG supports all currently documented `HNSW_SQ` sq_type values: `SQ4U`, `SQ6`, `SQ8`, `BF16`, `FP16`. It also supports refine types `SQ6`, `SQ8`, `BF16`, `FP16`, `FP32`.
+
 ### Q: Can I mix kwargs and environment variables?
 **A:** Yes! Parameters in `vector_db_storage_cls_kwargs` take priority over environment variables.
 
@@ -188,6 +191,15 @@ See `examples/milvus_kwargs_configuration_demo.py` for a complete working exampl
 
 ### Q: Is this approach recommended for RAGAnything?
 **A:** Yes! This is the **recommended approach** for any framework that builds on top of LightRAG, as it allows clean configuration passing through framework layers.
+
+### Q: What is the minimal LightRAG usage flow with Milvus?
+**A:** Use this sequence:
+1. Configure Milvus connection and index parameters (via env vars or `vector_db_storage_cls_kwargs`)
+2. Instantiate `LightRAG(..., vector_storage="MilvusVectorDBStorage")`
+3. Call `await rag.initialize_storages()`
+4. Call `await rag.ainsert(...)` for documents
+5. Call `await rag.aquery(..., param=QueryParam(mode="mix"))`
+6. Call `await rag.finalize_storages()` when done
 
 ## References
 
