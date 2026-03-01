@@ -14,6 +14,7 @@ from lightrag.kg.milvus_impl import (
     SUPPORTED_METRIC_TYPES,
     SUPPORTED_SQ_TYPES,
     SUPPORTED_REFINE_TYPES,
+    INDEX_TYPE_AUTOINDEX,
 )
 
 
@@ -23,7 +24,7 @@ class TestMilvusIndexConfig:
     def test_default_values(self):
         """Test default configuration"""
         config = MilvusIndexConfig()
-        assert config.index_type == "AUTOINDEX"
+        assert config.index_type == INDEX_TYPE_AUTOINDEX
         assert config.metric_type == "COSINE"
         assert config.hnsw_m == 16
         assert config.hnsw_ef_construction == 360
@@ -169,7 +170,7 @@ class TestMilvusIndexConfig:
 
     def test_is_autoindex_helper(self):
         """Test auto-index helper method"""
-        assert MilvusIndexConfig(index_type="AUTOINDEX").is_autoindex() is True
+        assert MilvusIndexConfig(index_type=INDEX_TYPE_AUTOINDEX).is_autoindex() is True
         assert MilvusIndexConfig(index_type="autoindex").is_autoindex() is True
         assert MilvusIndexConfig(index_type="HNSW").is_autoindex() is False
 
@@ -181,7 +182,7 @@ class TestMilvusIndexConfig:
         )
         assert (
             MilvusIndexConfig(
-                index_type="AUTOINDEX"
+                index_type=INDEX_TYPE_AUTOINDEX
             ).requires_milvus_version_validation()
             is False
         )
@@ -199,7 +200,7 @@ class TestMilvusIndexConfig:
 
     def test_build_index_params_autoindex(self):
         """Test AUTOINDEX does not generate parameters"""
-        config = MilvusIndexConfig(index_type="AUTOINDEX")
+        config = MilvusIndexConfig(index_type=INDEX_TYPE_AUTOINDEX)
         mock_index_params = MagicMock()
 
         result = config.build_index_params(mock_index_params)
@@ -308,7 +309,7 @@ class TestMilvusIndexConfig:
 
     def test_build_search_params_autoindex(self):
         """Test AUTOINDEX search parameters (empty)"""
-        config = MilvusIndexConfig(index_type="AUTOINDEX")
+        config = MilvusIndexConfig(index_type=INDEX_TYPE_AUTOINDEX)
         params = config.build_search_params()
         assert params == {}
 

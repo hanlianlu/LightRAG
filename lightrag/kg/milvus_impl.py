@@ -20,23 +20,20 @@ config = configparser.ConfigParser()
 config.read("config.ini", "utf-8")
 
 
-# Supported index types
-SUPPORTED_INDEX_TYPES = {
-    "AUTOINDEX",
-    "HNSW",
-    "HNSW_SQ",
-    "HNSW_PQ",
-    "HNSW_PRQ",
-    "IVF_FLAT",
-    "IVF_SQ8",
-    "IVF_PQ",
-    "DISKANN",
-    "SCANN",
-}
-
 INDEX_TYPE_AUTOINDEX = "AUTOINDEX"
 INDEX_TYPE_HNSW_SQ = "HNSW_SQ"
 IVF_INDEX_TYPES = {"IVF_FLAT", "IVF_SQ8", "IVF_PQ"}
+
+# Supported index types
+SUPPORTED_INDEX_TYPES = {
+    INDEX_TYPE_AUTOINDEX,
+    "HNSW",
+    INDEX_TYPE_HNSW_SQ,
+    "HNSW_PQ",
+    "HNSW_PRQ",
+    "DISKANN",
+    "SCANN",
+} | IVF_INDEX_TYPES
 
 # Supported metric types
 SUPPORTED_METRIC_TYPES = {"COSINE", "L2", "IP"}
