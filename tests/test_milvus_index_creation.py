@@ -6,6 +6,7 @@ This test suite validates:
 2. P2: Vector index creation failures are surfaced to callers
 """
 
+import asyncio
 import pytest
 from unittest.mock import MagicMock, patch
 from lightrag.kg.milvus_impl import MilvusVectorDBStorage, MilvusIndexConfig
@@ -208,8 +209,6 @@ class TestMilvusIndexCreation:
 
         with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
             with patch.object(storage, "_create_collection_if_not_exist"):
-                import asyncio
-
                 asyncio.get_event_loop().run_until_complete(storage.initialize())
 
         # get_server_version should NOT be called for HNSW
@@ -245,8 +244,6 @@ class TestMilvusIndexCreation:
 
         with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
             with patch.object(storage, "_create_collection_if_not_exist"):
-                import asyncio
-
                 asyncio.get_event_loop().run_until_complete(storage.initialize())
 
         # get_server_version SHOULD be called for HNSW_SQ
