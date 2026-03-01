@@ -209,7 +209,7 @@ class TestMilvusIndexCreation:
 
         with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
             with patch.object(storage, "_create_collection_if_not_exist"):
-                asyncio.get_event_loop().run_until_complete(storage.initialize())
+                asyncio.run(storage.initialize())
 
         # get_server_version should NOT be called for HNSW
         mock_client.get_server_version.assert_not_called()
@@ -244,7 +244,7 @@ class TestMilvusIndexCreation:
 
         with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
             with patch.object(storage, "_create_collection_if_not_exist"):
-                asyncio.get_event_loop().run_until_complete(storage.initialize())
+                asyncio.run(storage.initialize())
 
         # get_server_version SHOULD be called for HNSW_SQ
         mock_client.get_server_version.assert_called_once()
