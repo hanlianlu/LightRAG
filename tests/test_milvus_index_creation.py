@@ -130,7 +130,9 @@ class TestMilvusIndexCreation:
         with pytest.raises(RuntimeError, match="IndexParams not available"):
             config.build_index_params(None)
 
-    def test_build_index_params_returns_none_for_autoindex_when_index_params_is_none(self):
+    def test_build_index_params_returns_none_for_autoindex_when_index_params_is_none(
+        self,
+    ):
         """Test that build_index_params returns None for AUTOINDEX regardless of index_params"""
         config = MilvusIndexConfig(
             index_type="AUTOINDEX",
@@ -178,7 +180,6 @@ class TestMilvusIndexCreation:
             # Verify that _get_index_params was called at least once
             assert mock_get_index_params.call_count >= 1
 
-
     def test_version_probing_only_for_hnsw_sq(self):
         """Test that get_server_version is only called when index type requires it (P2 fix)"""
         from unittest.mock import AsyncMock
@@ -207,7 +208,9 @@ class TestMilvusIndexCreation:
         # Mock the init lock as an async context manager
         mock_lock = AsyncMock()
 
-        with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
+        with patch(
+            "lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock
+        ):
             with patch.object(storage, "_create_collection_if_not_exist"):
                 asyncio.run(storage.initialize())
 
@@ -242,7 +245,9 @@ class TestMilvusIndexCreation:
         # Mock the init lock as an async context manager
         mock_lock = AsyncMock()
 
-        with patch("lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock):
+        with patch(
+            "lightrag.kg.milvus_impl.get_data_init_lock", return_value=mock_lock
+        ):
             with patch.object(storage, "_create_collection_if_not_exist"):
                 asyncio.run(storage.initialize())
 
