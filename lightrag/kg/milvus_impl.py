@@ -36,7 +36,6 @@ SUPPORTED_INDEX_TYPES = {
 
 INDEX_TYPE_AUTOINDEX = "AUTOINDEX"
 INDEX_TYPE_HNSW_SQ = "HNSW_SQ"
-HNSW_INDEX_TYPES = {"HNSW", "HNSW_SQ", "HNSW_PQ", "HNSW_PRQ"}
 IVF_INDEX_TYPES = {"IVF_FLAT", "IVF_SQ8", "IVF_PQ"}
 
 # Supported metric types
@@ -223,6 +222,14 @@ class MilvusIndexConfig:
         """Return whether this index type has explicit Milvus version requirements."""
         return self.index_type in INDEX_VERSION_REQUIREMENTS
 
+    def is_hnsw_family(self) -> bool:
+        """Return whether index type belongs to the HNSW family."""
+        return self.index_type.startswith("HNSW")
+
+    def is_hnsw_sq(self) -> bool:
+        """Return whether index type is HNSW_SQ."""
+        return self.index_type == INDEX_TYPE_HNSW_SQ
+
     def build_index_params(self, index_params, field_name: str = "vector"):
         """
         Build pymilvus index parameters
@@ -247,12 +254,12 @@ class MilvusIndexConfig:
         params: Dict[str, Any] = {}
 
         # HNSW series indexes
-        if self.index_type in HNSW_INDEX_TYPES:
+        if self.is_hnsw_family():
             params["M"] = self.hnsw_m
             params["efConstruction"] = self.hnsw_ef_construction
 
             # HNSW_SQ specific parameters
-            if self.index_type == INDEX_TYPE_HNSW_SQ:
+            if self.is_hnsw_sq():
                 params["sq_type"] = self.sq_type
                 if self.sq_refine:
                     params["refine"] = True
@@ -287,9 +294,9 @@ class MilvusIndexConfig:
         """
         search_params: Dict[str, Any] = {}
 
-        if self.index_type in HNSW_INDEX_TYPES:
+        if self.is_hnsw_family():
             search_params["ef"] = self.hnsw_ef
-            if self.index_type == INDEX_TYPE_HNSW_SQ and self.sq_refine:
+            if self.is_hnsw_sq() and self.sq_refine:
                 search_params["refine_k"] = self.sq_refine_k
 
         elif self.index_type in IVF_INDEX_TYPES:

@@ -190,6 +190,18 @@ class TestMilvusIndexConfig:
             is False
         )
 
+    def test_is_hnsw_family_helper(self):
+        """Test HNSW-family helper method"""
+        assert MilvusIndexConfig(index_type="HNSW").is_hnsw_family() is True
+        assert MilvusIndexConfig(index_type="HNSW_SQ").is_hnsw_family() is True
+        assert MilvusIndexConfig(index_type="HNSW_PQ").is_hnsw_family() is True
+        assert MilvusIndexConfig(index_type="IVF_FLAT").is_hnsw_family() is False
+
+    def test_is_hnsw_sq_helper(self):
+        """Test HNSW_SQ helper method"""
+        assert MilvusIndexConfig(index_type="HNSW_SQ").is_hnsw_sq() is True
+        assert MilvusIndexConfig(index_type="HNSW").is_hnsw_sq() is False
+
     def test_build_index_params_autoindex(self):
         """Test AUTOINDEX does not generate parameters"""
         config = MilvusIndexConfig(index_type="AUTOINDEX")
