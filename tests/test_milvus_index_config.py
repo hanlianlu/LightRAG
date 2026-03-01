@@ -167,6 +167,29 @@ class TestMilvusIndexConfig:
         # Should handle "2.6.9-dev" format
         config.validate_milvus_version("2.6.9-dev")
 
+    def test_is_autoindex_helper(self):
+        """Test auto-index helper method"""
+        assert MilvusIndexConfig(index_type="AUTOINDEX").is_autoindex() is True
+        assert MilvusIndexConfig(index_type="autoindex").is_autoindex() is True
+        assert MilvusIndexConfig(index_type="HNSW").is_autoindex() is False
+
+    def test_requires_milvus_version_validation_helper(self):
+        """Test version-validation helper method"""
+        assert (
+            MilvusIndexConfig(index_type="HNSW_SQ").requires_milvus_version_validation()
+            is True
+        )
+        assert (
+            MilvusIndexConfig(
+                index_type="AUTOINDEX"
+            ).requires_milvus_version_validation()
+            is False
+        )
+        assert (
+            MilvusIndexConfig(index_type="HNSW").requires_milvus_version_validation()
+            is False
+        )
+
     def test_build_index_params_autoindex(self):
         """Test AUTOINDEX does not generate parameters"""
         config = MilvusIndexConfig(index_type="AUTOINDEX")

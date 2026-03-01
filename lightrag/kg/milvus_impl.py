@@ -34,6 +34,11 @@ SUPPORTED_INDEX_TYPES = {
     "SCANN",
 }
 
+INDEX_TYPE_AUTOINDEX = "AUTOINDEX"
+INDEX_TYPE_HNSW_SQ = "HNSW_SQ"
+HNSW_INDEX_TYPES = {"HNSW", "HNSW_SQ", "HNSW_PQ", "HNSW_PRQ"}
+IVF_INDEX_TYPES = {"IVF_FLAT", "IVF_SQ8", "IVF_PQ"}
+
 # Supported metric types
 SUPPORTED_METRIC_TYPES = {"COSINE", "L2", "IP"}
 
@@ -44,7 +49,7 @@ SUPPORTED_REFINE_TYPES = {"SQ6", "SQ8", "BF16", "FP16", "FP32"}
 # Index type version requirements
 # Important: HNSW_SQ was first introduced in Milvus 2.6.8 (not 2.5)
 INDEX_VERSION_REQUIREMENTS = {
-    "HNSW_SQ": "2.6.8",  # HNSW_SQ requires Milvus 2.6.8+ (supports sq_types such as SQ4U, SQ6, SQ8, BF16, FP16)
+    INDEX_TYPE_HNSW_SQ: "2.6.8",  # HNSW_SQ requires Milvus 2.6.8+ (supports sq_types such as SQ4U, SQ6, SQ8, BF16, FP16)
 }
 
 
@@ -103,7 +108,7 @@ class MilvusIndexConfig:
         """Load configuration from environment variables (init parameters take precedence)"""
         # Index type
         self.index_type = (
-            self.index_type or os.environ.get("MILVUS_INDEX_TYPE", "AUTOINDEX")
+            self.index_type or os.environ.get("MILVUS_INDEX_TYPE", INDEX_TYPE_AUTOINDEX)
         ).upper()
 
         # Metric type
@@ -155,7 +160,7 @@ class MilvusIndexConfig:
                 f"Supported: {SUPPORTED_METRIC_TYPES}"
             )
 
-        if self.index_type == "HNSW_SQ":
+        if self.index_type == INDEX_TYPE_HNSW_SQ:
             if self.sq_type not in SUPPORTED_SQ_TYPES:
                 raise ValueError(
                     f"Unsupported sq_type: {self.sq_type}. "
@@ -192,8 +197,8 @@ class MilvusIndexConfig:
         )  # Handle "2.6.9-dev" format
 
         # Check HNSW_SQ index type version requirements (requires 2.6.8+)
-        if self.index_type == "HNSW_SQ":
-            required = INDEX_VERSION_REQUIREMENTS["HNSW_SQ"]
+        if self.requires_milvus_version_validation():
+            required = INDEX_VERSION_REQUIREMENTS[INDEX_TYPE_HNSW_SQ]
             if current_ver < version.parse(required):
                 raise ValueError(
                     f"HNSW_SQ requires Milvus {required}+, "
@@ -203,8 +208,20 @@ class MilvusIndexConfig:
         logger.info(
             f"Milvus version {server_version} validated for index type "
             f"{self.index_type}"
-            + (f" with sq_type {self.sq_type}" if self.index_type == "HNSW_SQ" else "")
+            + (
+                f" with sq_type {self.sq_type}"
+                if self.index_type == INDEX_TYPE_HNSW_SQ
+                else ""
+            )
         )
+
+    def is_autoindex(self) -> bool:
+        """Return whether index type uses Milvus default auto-indexing."""
+        return self.index_type == INDEX_TYPE_AUTOINDEX
+
+    def requires_milvus_version_validation(self) -> bool:
+        """Return whether this index type has explicit Milvus version requirements."""
+        return self.index_type in INDEX_VERSION_REQUIREMENTS
 
     def build_index_params(self, index_params, field_name: str = "vector"):
         """
@@ -217,7 +234,7 @@ class MilvusIndexConfig:
         Returns:
             IndexParams object, or None (for AUTOINDEX or when index_params is None)
         """
-        if self.index_type == "AUTOINDEX":
+        if self.is_autoindex():
             logger.info("Using AUTOINDEX (Milvus default), no custom index params")
             return None
 
@@ -230,19 +247,19 @@ class MilvusIndexConfig:
         params: Dict[str, Any] = {}
 
         # HNSW series indexes
-        if self.index_type in ("HNSW", "HNSW_SQ", "HNSW_PQ", "HNSW_PRQ"):
+        if self.index_type in HNSW_INDEX_TYPES:
             params["M"] = self.hnsw_m
             params["efConstruction"] = self.hnsw_ef_construction
 
             # HNSW_SQ specific parameters
-            if self.index_type == "HNSW_SQ":
+            if self.index_type == INDEX_TYPE_HNSW_SQ:
                 params["sq_type"] = self.sq_type
                 if self.sq_refine:
                     params["refine"] = True
                     params["refine_type"] = self.sq_refine_type
 
         # IVF series indexes
-        elif self.index_type in ("IVF_FLAT", "IVF_SQ8", "IVF_PQ"):
+        elif self.index_type in IVF_INDEX_TYPES:
             params["nlist"] = self.ivf_nlist
 
         # DISKANN / SCANN have no additional params
@@ -270,12 +287,12 @@ class MilvusIndexConfig:
         """
         search_params: Dict[str, Any] = {}
 
-        if self.index_type in ("HNSW", "HNSW_SQ", "HNSW_PQ", "HNSW_PRQ"):
+        if self.index_type in HNSW_INDEX_TYPES:
             search_params["ef"] = self.hnsw_ef
-            if self.index_type == "HNSW_SQ" and self.sq_refine:
+            if self.index_type == INDEX_TYPE_HNSW_SQ and self.sq_refine:
                 search_params["refine_k"] = self.sq_refine_k
 
-        elif self.index_type in ("IVF_FLAT", "IVF_SQ8", "IVF_PQ"):
+        elif self.index_type in IVF_INDEX_TYPES:
             search_params["nprobe"] = self.ivf_nprobe
 
         return {"params": search_params} if search_params else {}
@@ -300,16 +317,18 @@ class MilvusIndexConfig:
             "hnsw_m": self.hnsw_m,
             "hnsw_ef_construction": self.hnsw_ef_construction,
             "hnsw_ef": self.hnsw_ef,
-            "sq_type": self.sq_type if self.index_type == "HNSW_SQ" else None,
-            "sq_refine": self.sq_refine if self.index_type == "HNSW_SQ" else None,
+            "sq_type": self.sq_type if self.index_type == INDEX_TYPE_HNSW_SQ else None,
+            "sq_refine": (
+                self.sq_refine if self.index_type == INDEX_TYPE_HNSW_SQ else None
+            ),
             "sq_refine_type": (
                 self.sq_refine_type
-                if self.index_type == "HNSW_SQ" and self.sq_refine
+                if self.index_type == INDEX_TYPE_HNSW_SQ and self.sq_refine
                 else None
             ),
             "sq_refine_k": (
                 self.sq_refine_k
-                if self.index_type == "HNSW_SQ" and self.sq_refine
+                if self.index_type == INDEX_TYPE_HNSW_SQ and self.sq_refine
                 else None
             ),
             "ivf_nlist": (
@@ -1339,7 +1358,7 @@ class MilvusVectorDBStorage(BaseVectorStorage):
                     )
 
                 # Validate Milvus version compatibility only when required
-                if self.index_config.index_type == "HNSW_SQ":
+                if self.index_config.requires_milvus_version_validation():
                     try:
                         server_version = self._client.get_server_version()
                         self.index_config.validate_milvus_version(server_version)
