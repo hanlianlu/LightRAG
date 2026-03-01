@@ -1157,7 +1157,7 @@ See `env.example` for the full list of variables.
 
 Best for: **Python SDK usage, framework integration (e.g. RAGAnything), and when you need different configs per instance**.
 
-All 11 index parameters can be passed through `vector_db_storage_cls_kwargs`. They take priority over environment variables.
+All index parameters can be passed through `vector_db_storage_cls_kwargs`. They take priority over environment variables.
 
 ```python
 from lightrag import LightRAG
