@@ -1081,93 +1081,187 @@ async def initialize_rag():
 <details>
 <summary> <b>Using Milvus for Vector Storage</b> </summary>
 
-Milvus is a high-performance, scalable vector database that can be used for production-level vector storage. LightRAG supports configurable index types for Milvus, allowing you to optimize performance and memory usage based on your specific needs.
+Milvus is a high-performance, scalable vector database for production-level vector storage. LightRAG provides three ways to configure Milvus, plus support for configurable index types to optimize performance and memory usage.
 
-### Milvus Index Configuration
+### Supported Index Types
 
-LightRAG provides flexible index configuration for Milvus vector storage through environment variables:
-
-**Supported Index Types:**
 - `AUTOINDEX` (default): Milvus automatically selects the best index
-- `HNSW`: Hierarchical Navigable Small World index for high recall
-- `HNSW_SQ`: HNSW with scalar quantization (requires Milvus 2.6.8+)
-- `IVF_FLAT`: Inverted file index
-- `IVF_SQ8`: IVF with 8-bit scalar quantization
+- `HNSW`: Hierarchical Navigable Small World graph for high recall
+- `HNSW_SQ`: HNSW with scalar quantization for memory savings (requires Milvus 2.6.8+)
+- `HNSW_PQ`, `HNSW_PRQ`: HNSW with product / product-residual quantization
+- `IVF_FLAT`, `IVF_SQ8`, `IVF_PQ`: Inverted-file family indexes
 - `DISKANN`: Disk-based approximate nearest neighbor
-- And more (see `env.example`)
+- `SCANN`: Scalable nearest neighbor
 
-**Basic Configuration:**
+### Supported Metric Types
+
+`COSINE` (default), `L2`, `IP`
+
+---
+
+### Approach 1 — Environment Variables (`.env` file)
+
+Best for: **LightRAG Server deployments and Docker/k8s setups**.
+
 ```bash
-# Set in your .env file or environment
+# Connection
 MILVUS_URI=http://localhost:19530
 MILVUS_DB_NAME=lightrag
+# MILVUS_USER=root
+# MILVUS_PASSWORD=your_password
+# MILVUS_TOKEN=your_token
 
-# Index configuration (all optional, with sensible defaults)
-MILVUS_INDEX_TYPE=HNSW         # Default: AUTOINDEX
-MILVUS_METRIC_TYPE=COSINE      # Default: COSINE (also supports L2, IP)
-MILVUS_HNSW_M=30               # Default: 30, range: [2-2048]
-MILVUS_HNSW_EF_CONSTRUCTION=200 # Default: 200
-MILVUS_HNSW_EF=100             # Default: 100
+# Storage selection
+LIGHTRAG_VECTOR_STORAGE=MilvusVectorDBStorage
+
+# Index configuration (all optional — sensible defaults apply)
+MILVUS_INDEX_TYPE=HNSW              # Default: AUTOINDEX
+MILVUS_METRIC_TYPE=COSINE           # Default: COSINE
+MILVUS_HNSW_M=16                    # Default: 16, range [2-2048]
+MILVUS_HNSW_EF_CONSTRUCTION=360     # Default: 360
+MILVUS_HNSW_EF=200                  # Default: 200
+
+# HNSW_SQ options (requires Milvus 2.6.8+)
+# MILVUS_INDEX_TYPE=HNSW_SQ
+# MILVUS_HNSW_SQ_TYPE=SQ8           # SQ4U, SQ6, SQ8, BF16, FP16
+# MILVUS_HNSW_SQ_REFINE=false       # Enable refinement
+# MILVUS_HNSW_SQ_REFINE_TYPE=FP32   # Refinement precision
+# MILVUS_HNSW_SQ_REFINE_K=10        # Refinement expansion factor
+
+# IVF options
+# MILVUS_IVF_NLIST=1024
+# MILVUS_IVF_NPROBE=16
 ```
 
-**Advanced HNSW_SQ Configuration (Milvus 2.6.8+):**
+Then in Python code:
 
-HNSW_SQ provides significant memory savings through scalar quantization while maintaining good recall:
-
-```bash
-MILVUS_INDEX_TYPE=HNSW_SQ
-MILVUS_HNSW_SQ_TYPE=SQ8        # Options: SQ4U, SQ6, SQ8, BF16, FP16
-MILVUS_HNSW_SQ_REFINE=true     # Enable refinement for higher precision
-MILVUS_HNSW_SQ_REFINE_TYPE=FP32 # Refinement precision
-MILVUS_HNSW_SQ_REFINE_K=10     # Refinement expansion factor
-```
-
-**Memory-Performance Trade-offs:**
-- `SQ4U`: 8x compression, lower precision
-- `SQ6`: ~5.3x compression, balanced
-- `SQ8`: 4x compression, good precision (recommended)
-- `BF16/FP16`: 2x compression, high precision
-
-**Example: Production Configuration with HNSW_SQ**
 ```python
-# In your .env file
-MILVUS_URI=http://localhost:19530
-MILVUS_DB_NAME=lightrag
-MILVUS_INDEX_TYPE=HNSW_SQ
-MILVUS_HNSW_M=64                # Higher M for better recall
-MILVUS_HNSW_EF_CONSTRUCTION=256 # Higher for better index quality
-MILVUS_HNSW_EF=150              # Higher for better search recall
-MILVUS_HNSW_SQ_TYPE=SQ8         # Balanced compression
-MILVUS_HNSW_SQ_REFINE=true      # Enable refinement
-MILVUS_METRIC_TYPE=COSINE
-
-# Then use in your code
-from lightrag import LightRAG, QueryParam
-from lightrag.llm import gpt_4o_mini_complete, openai_embed
+from lightrag import LightRAG
 
 async def initialize_rag():
     rag = LightRAG(
         working_dir="./rag_storage",
-        llm_model_func=gpt_4o_mini_complete,
-        embedding_func=openai_embed,
+        llm_model_func=...,
+        embedding_func=...,
         vector_storage="MilvusVectorDBStorage",
     )
-
-    # Initialize storages (includes version validation for HNSW_SQ)
     await rag.initialize_storages()
     return rag
 ```
 
-**Version Requirements:**
-- HNSW_SQ index type requires **Milvus 2.6.8 or higher**
-- LightRAG will automatically validate the server version and raise an error if requirements are not met
-- Other index types work with Milvus 2.0+
+See `env.example` for the full list of variables.
 
-**Backward Compatibility:**
-- If no index configuration is provided, LightRAG uses AUTOINDEX (Milvus default behavior)
-- Existing collections are not affected; index configuration only applies to newly created collections
+---
 
-For complete configuration options, see the `env.example` file in the repository.
+### Approach 2 — Programmatic via `vector_db_storage_cls_kwargs` (Recommended for code/framework integration)
+
+Best for: **Python SDK usage, framework integration (e.g. RAGAnything), and when you need different configs per instance**.
+
+All 11 index parameters can be passed through `vector_db_storage_cls_kwargs`. They take priority over environment variables.
+
+```python
+from lightrag import LightRAG
+
+rag = LightRAG(
+    working_dir="./rag_storage",
+    llm_model_func=...,
+    embedding_func=...,
+    vector_storage="MilvusVectorDBStorage",
+    vector_db_storage_cls_kwargs={
+        # Required
+        "cosine_better_than_threshold": 0.2,
+        # Index type & metric (optional — defaults to AUTOINDEX / COSINE)
+        "index_type": "HNSW",
+        "metric_type": "COSINE",
+        # HNSW parameters (optional)
+        "hnsw_m": 32,
+        "hnsw_ef_construction": 256,
+        "hnsw_ef": 150,
+    },
+)
+```
+
+**HNSW_SQ example** (requires Milvus 2.6.8+):
+
+```python
+rag = LightRAG(
+    working_dir="./rag_storage",
+    llm_model_func=...,
+    embedding_func=...,
+    vector_storage="MilvusVectorDBStorage",
+    vector_db_storage_cls_kwargs={
+        "cosine_better_than_threshold": 0.2,
+        "index_type": "HNSW_SQ",
+        "hnsw_m": 48,
+        "hnsw_ef_construction": 400,
+        "hnsw_ef": 200,
+        "sq_type": "SQ8",
+        "sq_refine": True,
+        "sq_refine_type": "FP32",
+        "sq_refine_k": 20,
+    },
+)
+```
+
+**IVF example:**
+
+```python
+vector_db_storage_cls_kwargs={
+    "cosine_better_than_threshold": 0.2,
+    "index_type": "IVF_FLAT",
+    "metric_type": "L2",
+    "ivf_nlist": 2048,
+    "ivf_nprobe": 32,
+}
+```
+
+For a complete working example, see `examples/milvus_kwargs_configuration_demo.py`.
+For detailed documentation, see [`docs/MilvusConfigurationGuide.md`](docs/MilvusConfigurationGuide.md).
+
+---
+
+### Approach 3 — `config.ini` File (Legacy, connection only)
+
+The `config.ini` file is only used for Milvus **connection** parameters (uri, user, password, token, db_name) and does **not** support index configuration. Use Approach 1 or 2 for index tuning.
+
+```ini
+[milvus]
+uri = http://localhost:19530
+; user = root
+; password = your_password
+; token = your_token
+; db_name = lightrag
+```
+
+---
+
+### Configuration Priority
+
+When the same parameter is specified in multiple places, the highest-priority source wins:
+
+1. `vector_db_storage_cls_kwargs` parameters **(highest)**
+2. Environment variables (`MILVUS_*`)
+3. `config.ini` values (connection only)
+4. Built-in defaults **(lowest)**
+
+### HNSW_SQ Memory-Performance Trade-offs
+
+| Quantization | Compression | Precision | Notes |
+|---|---|---|---|
+| `SQ4U` | ~8× | Lower | Best memory savings |
+| `SQ6` | ~5.3× | Balanced | Good middle ground |
+| `SQ8` | ~4× | Good | **Recommended** |
+| `BF16` / `FP16` | ~2× | High | Minimal quality loss |
+
+### Version Requirements
+
+- **HNSW_SQ** requires **Milvus 2.6.8+** — LightRAG validates this automatically
+- All other index types work with Milvus 2.0+
+
+### Backward Compatibility
+
+- Without any index configuration LightRAG uses `AUTOINDEX` (current default behavior)
+- Existing collections are not affected; index settings only apply to newly created collections
 
 </details>
 

@@ -17,6 +17,13 @@ database = lightrag
 [redis]
 uri=redis://localhost:6379/1
 
+[milvus]
+uri = http://localhost:19530
+; user = root
+; password = your_password
+; token = your_token
+; db_name = lightrag
+
 [qdrant]
 uri = http://localhost:16333
 
