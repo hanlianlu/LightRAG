@@ -14,6 +14,8 @@ from lightrag.kg.milvus_impl import (
     SUPPORTED_METRIC_TYPES,
     SUPPORTED_SQ_TYPES,
     SUPPORTED_REFINE_TYPES,
+    INDEX_TYPE_HNSW_SQ,
+    HNSW_INDEX_TYPES,
 )
 
 
@@ -190,17 +192,11 @@ class TestMilvusIndexConfig:
             is False
         )
 
-    def test_is_hnsw_family_helper(self):
-        """Test HNSW-family helper method"""
-        assert MilvusIndexConfig(index_type="HNSW").is_hnsw_family() is True
-        assert MilvusIndexConfig(index_type="HNSW_SQ").is_hnsw_family() is True
-        assert MilvusIndexConfig(index_type="HNSW_PQ").is_hnsw_family() is True
-        assert MilvusIndexConfig(index_type="IVF_FLAT").is_hnsw_family() is False
-
-    def test_is_hnsw_sq_helper(self):
-        """Test HNSW_SQ helper method"""
-        assert MilvusIndexConfig(index_type="HNSW_SQ").is_hnsw_sq() is True
-        assert MilvusIndexConfig(index_type="HNSW").is_hnsw_sq() is False
+    def test_hnsw_sq_is_hnsw_subset(self):
+        """Test HNSW_SQ is included in HNSW index family"""
+        assert INDEX_TYPE_HNSW_SQ in HNSW_INDEX_TYPES
+        assert {"HNSW", "HNSW_PQ", "HNSW_PRQ"}.issubset(HNSW_INDEX_TYPES)
+        assert "IVF_FLAT" not in HNSW_INDEX_TYPES
 
     def test_build_index_params_autoindex(self):
         """Test AUTOINDEX does not generate parameters"""
