@@ -36,7 +36,6 @@ SUPPORTED_INDEX_TYPES = {
 
 INDEX_TYPE_AUTOINDEX = "AUTOINDEX"
 INDEX_TYPE_HNSW_SQ = "HNSW_SQ"
-HNSW_INDEX_TYPES = {"HNSW", INDEX_TYPE_HNSW_SQ, "HNSW_PQ", "HNSW_PRQ"}
 IVF_INDEX_TYPES = {"IVF_FLAT", "IVF_SQ8", "IVF_PQ"}
 
 # Supported metric types
@@ -247,7 +246,7 @@ class MilvusIndexConfig:
         params: Dict[str, Any] = {}
 
         # HNSW series indexes
-        if self.index_type in HNSW_INDEX_TYPES:
+        if self.index_type.startswith("HNSW"):
             params["M"] = self.hnsw_m
             params["efConstruction"] = self.hnsw_ef_construction
 
@@ -287,7 +286,7 @@ class MilvusIndexConfig:
         """
         search_params: Dict[str, Any] = {}
 
-        if self.index_type in HNSW_INDEX_TYPES:
+        if self.index_type.startswith("HNSW"):
             search_params["ef"] = self.hnsw_ef
             if self.index_type == INDEX_TYPE_HNSW_SQ and self.sq_refine:
                 search_params["refine_k"] = self.sq_refine_k
