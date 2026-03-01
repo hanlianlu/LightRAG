@@ -9,6 +9,7 @@ This test suite validates:
 import pytest
 from unittest.mock import MagicMock, patch
 from lightrag.kg.milvus_impl import MilvusVectorDBStorage, MilvusIndexConfig
+from lightrag.kg.shared_storage import initialize_share_data
 
 
 @pytest.mark.offline
@@ -117,18 +118,16 @@ class TestMilvusIndexCreation:
         assert result == mock_index_params
         mock_index_params.add_index.assert_called_once()
 
-    def test_build_index_params_returns_none_when_index_params_is_none(self):
-        """Test that build_index_params returns None when index_params is None (compatibility)"""
+    def test_build_index_params_raises_when_index_params_is_none(self):
+        """Test that custom index config fails when compatibility helper returns None"""
         config = MilvusIndexConfig(
             index_type="HNSW",
             metric_type="COSINE",
         )
 
         # Call with None (simulating compatibility helper returning None)
-        result = config.build_index_params(None)
-
-        # Should return None
-        assert result is None
+        with pytest.raises(RuntimeError, match="IndexParams not available"):
+            config.build_index_params(None)
 
     def test_create_indexes_uses_compatibility_helper(self):
         """Test that _create_indexes_after_collection uses _get_index_params (P1 fix)"""
@@ -166,6 +165,41 @@ class TestMilvusIndexCreation:
 
             # Verify that _get_index_params was called at least once
             assert mock_get_index_params.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_initialize_skips_version_probe_for_non_hnsw_sq(self):
+        """Test version probing is gated to HNSW_SQ only"""
+        initialize_share_data()
+        mock_embedding_func = MagicMock()
+        mock_embedding_func.embedding_dim = 128
+
+        storage = MilvusVectorDBStorage(
+            namespace="test_entities",
+            workspace="test_workspace",
+            global_config={
+                "working_dir": "/tmp",
+                "embedding_batch_num": 100,
+                "vector_db_storage_cls_kwargs": {
+                    "cosine_better_than_threshold": 0.3,
+                    "index_type": "HNSW",
+                },
+            },
+            embedding_func=mock_embedding_func,
+            meta_fields=set(),
+        )
+
+        mock_client = MagicMock()
+        mock_client.get_server_version.side_effect = RuntimeError(
+            "should not be called"
+        )
+
+        with patch("lightrag.kg.milvus_impl.MilvusClient", return_value=mock_client):
+            with patch.object(
+                storage, "_create_collection_if_not_exist", return_value=None
+            ):
+                await storage.initialize()
+
+        mock_client.get_server_version.assert_not_called()
 
 
 if __name__ == "__main__":
